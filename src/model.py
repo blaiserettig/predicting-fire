@@ -41,176 +41,452 @@ bnd_pnw['area_ha'] = bnd_pnw.geometry.area / 10000.0
 
 ### FIGURE 1
 
-annual = bnd_pnw.groupby('YEAR').agg(
-    fire_count = ('Event_ID','count'),
-    total_area_ha = ('area_ha','sum'),
-    median_area_ha = ('area_ha','median'),
-    mean_area_ha = ('area_ha','mean')
-).reset_index()
+# annual = bnd_pnw.groupby('YEAR').agg(
+#     fire_count = ('Event_ID','count'),
+#     total_area_ha = ('area_ha','sum'),
+#     median_area_ha = ('area_ha','median'),
+#     mean_area_ha = ('area_ha','mean')
+# ).reset_index()
 
-sns.set_theme(style="darkgrid")
-fig, ax = plt.subplots(1, 2, figsize=(12, 4))
-sns.lineplot(data=annual, x="YEAR", y="fire_count", ax=ax[0])
-sns.lineplot(data=annual, x="YEAR", y="total_area_ha", ax=ax[1])
-ax[0].set_title("Fire Count per Year")
-ax[1].set_title("Total Burned Area (ha)")
+# sns.set_theme(style="darkgrid")
+# fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+# sns.lineplot(data=annual, x="YEAR", y="fire_count", ax=ax[0])
+# sns.lineplot(data=annual, x="YEAR", y="total_area_ha", ax=ax[1])
+# ax[0].set_title("Fire Count per Year")
+# ax[1].set_title("Total Burned Area (ha)")
+# plt.tight_layout()
+# plt.show()
+
+# ###
+
+# ### FIGURE 2
+
+# fires = bnd_pnw[(bnd_pnw['YEAR'] >= 2000) & (bnd_pnw['YEAR'] <= 2024)]
+# climate_stats = []
+
+# # to geographic CRS
+# fires_geo = fires.to_crs(epsg=4269)
+# fires_geo['centroid_lon'] = fires_geo.geometry.centroid.x
+# fires_geo['centroid_lat'] = fires_geo.geometry.centroid.y
+
+# for year in range(2000, 2025):
+#     fires_year = fires_geo[fires_geo['YEAR'] == year]
+#     if fires_year.empty:
+#         continue
+
+#     if year not in helper.prism_paths['tmean'] or year not in helper.prism_paths['ppt']:
+#         continue
+    
+#     tmean_tif = helper.prism_paths['tmean'][year]
+#     ppt_tif = helper.prism_paths['ppt'][year]
+
+#     print(f"Processing {year}...")
+
+#     with rasterio.open(tmean_tif) as src:
+#         tmean_vals = [x[0] for x in src.sample(zip(fires_year['centroid_lon'], fires_year['centroid_lat']))]
+    
+#     with rasterio.open(ppt_tif) as src:
+#         ppt_vals = [x[0] for x in src.sample(zip(fires_year['centroid_lon'], fires_year['centroid_lat']))]
+    
+#     fires_year = fires_year.copy()
+#     fires_year['tmean'] = tmean_vals
+#     fires_year['ppt'] = ppt_vals
+    
+#     fires_year.loc[fires_year['tmean'] < -9000, 'tmean'] = np.nan
+#     fires_year.loc[fires_year['ppt'] < -9000, 'ppt'] = np.nan
+    
+#     climate_stats.append(fires_year)
+
+# fires_climate = gpd.GeoDataFrame(pd.concat(climate_stats, ignore_index=True), crs=fires_geo.crs)
+# fires_climate = fires_climate.dropna(subset=['tmean', 'ppt'])
+# fires_climate = fires_climate.to_crs(epsg=5070)
+
+# sns.lmplot(data=fires_climate, x='tmean', y='area_ha', hue='STATE', scatter_kws={'s':10})
+# plt.title("Fire Size vs Mean Annual Temperature (PRISM 2000–2024)")
+# plt.show()
+
+# sns.lmplot(data=fires_climate, x='ppt', y='area_ha', hue='STATE', scatter_kws={'s':10})
+# plt.title("Fire Size vs Total Annual Precipitation (PRISM 2000–2024)")
+# plt.show()
+
+# ###
+
+# ### FIGURE 3
+
+# fires_climate['temp_x_drought'] = fires_climate['tmean'] * (1 / fires_climate['ppt'])
+# fires_climate['vpd_proxy'] = fires_climate['tmean'] / fires_climate['ppt']
+
+# # Random Forest to identify important predictors
+# features = ['tmean', 'ppt', 'temp_x_drought', 'vpd_proxy']
+# X = fires_climate[features].dropna()
+# y = fires_climate.loc[X.index, 'area_ha']
+
+# rf = RandomForestRegressor(n_estimators=100, random_state=42)
+# rf.fit(X, np.log1p(y))  # log transform for skewed area data
+
+# # Feature importance
+# importance_df = pd.DataFrame({
+#     'feature': features,
+#     'importance': rf.feature_importances_
+# }).sort_values('importance', ascending=False)
+
+# sns.barplot(data=importance_df, x='importance', y='feature')
+# plt.title('Climate Variable Importance for Fire Size')
+# plt.show()
+
+
+# ###
+
+# ### FIGURE 4
+
+# # MEGA FIRES
+# threshold = fires_climate['area_ha'].quantile(0.95)
+# fires_climate['is_megafire'] = fires_climate['area_ha'] > threshold
+
+# # Compare climate conditions
+# fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+# sns.boxplot(data=fires_climate, x='is_megafire', y='tmean', ax=axes[0])
+# axes[0].set_title('Temperature: Normal vs Mega Fires')
+
+# sns.boxplot(data=fires_climate, x='is_megafire', y='ppt', ax=axes[1])
+# axes[1].set_title('Precipitation: Normal vs Mega Fires')
+
+# plt.tight_layout()
+# plt.show()
+
+# # Statistical test
+# from scipy.stats import mannwhitneyu
+# stat, p = mannwhitneyu(
+#     fires_climate[fires_climate['is_megafire']]['tmean'].dropna(),
+#     fires_climate[~fires_climate['is_megafire']]['tmean'].dropna()
+# )
+# print(f"Temperature difference p-value: {p}")
+
+# ###
+
+# ###
+
+# fires_with_year = fires_climate[['Event_ID', 'YEAR', 'geometry', 'area_ha']].copy()
+
+# reburns = []
+# for idx, fire in fires_with_year.iterrows():
+#     # Find fires in previous years that overlap
+#     previous_fires = fires_with_year[fires_with_year['YEAR'] < fire['YEAR']]
+#     overlaps = previous_fires[previous_fires.intersects(fire.geometry)]
+    
+#     if len(overlaps) > 0:
+#         reburns.append({
+#             'Event_ID': fire['Event_ID'],
+#             'YEAR': fire['YEAR'],
+#             'previous_fires': len(overlaps),
+#             'years_since_last': fire['YEAR'] - overlaps['YEAR'].max()
+#         })
+
+# reburn_df = pd.DataFrame(reburns)
+# print(f"Reburned areas: {len(reburn_df)}")
+# sns.histplot(data=reburn_df, x='years_since_last', bins=20)
+# plt.title('Fire Return Interval Distribution')
+# plt.show()
+
+# ###
+
+# ###
+
+# fires_climate['MONTH'] = fires_climate['Ig_Date'].dt.month
+
+# season_metrics = fires_climate.groupby('YEAR').agg({
+#     'MONTH': ['min', 'max', lambda x: x.max() - x.min()],
+#     'Event_ID': 'count'
+# }).reset_index()
+
+# season_metrics.columns = ['YEAR', 'first_fire_month', 'last_fire_month', 
+#                           'season_length_months', 'fire_count']
+
+# fig, ax1 = plt.subplots(figsize=(10, 5))
+# ax1.plot(season_metrics['YEAR'], season_metrics['season_length_months'], 
+#          color='tab:red', marker='o')
+# ax1.set_ylabel('Fire Season Length (months)', color='tab:red')
+# ax1.set_xlabel('Year')
+# ax2 = ax1.twinx()
+# ax2.plot(season_metrics['YEAR'], season_metrics['fire_count'], 
+#          color='tab:blue', alpha=0.3)
+# ax2.set_ylabel('Fire Count', color='tab:blue')
+# plt.title('Fire Season Duration Trends')
+# plt.show()
+
+### ICS 209 DATA
+
+### 1
+
+ics = pd.read_csv("data/ics209/ics209-plus-wf_sitreps_1999to2020.csv", low_memory=False)
+ics['REPORT_TO_DATE'] = pd.to_datetime(ics['REPORT_TO_DATE'], format='%m/%d/%Y', errors='coerce')
+ics['DISCOVERY_DATE'] = pd.to_datetime(ics['DISCOVERY_DATE'], format='%m/%d/%Y', errors='coerce')
+ics['days_since_discovery'] = (ics['REPORT_TO_DATE'] - ics['DISCOVERY_DATE']).dt.days
+ics_pnw = ics[ics['POO_STATE'].isin(['WA', 'OR', 'ID'])].copy()
+
+
+ics_pnw['CY'] = pd.to_numeric(ics_pnw['CY'], errors='coerce')
+ics_pnw['DISCOVERY_DATE'] = ics_pnw['DISCOVERY_DATE'].fillna(pd.to_datetime(ics_pnw['CY'].astype(str) + '-07-01'))
+ics_pnw['REPORT_TO_DATE'] = ics_pnw['REPORT_TO_DATE'].fillna(pd.to_datetime(ics_pnw['CY'].astype(str) + '-08-01'))
+ics_pnw['days_since_discovery'] = (ics_pnw['REPORT_TO_DATE'] - ics_pnw['DISCOVERY_DATE']).dt.days
+
+def analyze_fire_trajectory(fire_id):
+    fire_reports = ics_pnw[ics_pnw['FIRE_EVENT_ID'] == fire_id].sort_values('REPORT_TO_DATE')
+    
+    if len(fire_reports) < 3:
+        return None
+    
+    days = fire_reports['days_since_discovery'].dropna()
+    duration_days = days.max() if not days.empty else np.nan
+    
+    return {
+        'fire_id': fire_id,
+        'duration_days': duration_days,
+        'final_acres': fire_reports['ACRES'].max(),
+        'max_personnel': fire_reports['TOTAL_PERSONNEL'].max(),
+        'peak_personnel_day': fire_reports.loc[fire_reports['TOTAL_PERSONNEL'].idxmax(), 'days_since_discovery']
+                                if fire_reports['TOTAL_PERSONNEL'].notna().any() else np.nan,
+        'total_cost': fire_reports['EST_IM_COST_TO_DATE'].max(),
+        'growth_rate': (
+            fire_reports['ACRES'].max() / duration_days
+            if duration_days and duration_days > 0
+            else np.nan
+        ),
+        'structures_destroyed': fire_reports['STR_DESTROYED'].max(),
+        'total_evacuated': fire_reports['NUM_EVACUATED'].max()
+    }
+
+fire_trajectories = []
+for fire_id in ics_pnw['FIRE_EVENT_ID'].unique():
+    traj = analyze_fire_trajectory(fire_id)
+    if traj:
+        fire_trajectories.append(traj)
+
+traj_df = pd.DataFrame(fire_trajectories)
+traj_df = traj_df.dropna(subset=['growth_rate', 'duration_days', 'total_cost', 'max_personnel'])
+
+fig, axes = plt.subplots(3, 1, figsize=(14, 10))
+
+axes[0].scatter(traj_df['final_acres'], traj_df['max_personnel'], alpha=0.5)
+axes[0].set_xlabel('Final Fire Size (acres)')
+axes[0].set_ylabel('Peak Personnel')
+axes[0].set_xscale('symlog')
+axes[0].set_yscale('symlog')
+axes[0].set_title('Personnel vs Fire Size')
+
+axes[1].scatter(traj_df['growth_rate'], traj_df['max_personnel'], alpha=0.5)
+axes[1].set_xlabel('Growth Rate (acres/day)')
+axes[1].set_ylabel('Peak Personnel')
+axes[1].set_xscale('symlog')
+axes[1].set_yscale('symlog')
+axes[1].set_title('Personnel vs Growth Rate')
+
+# axes[1,0].scatter(traj_df['duration_days'], traj_df['total_cost'], alpha=0.5)
+# axes[1,0].set_xlabel('Fire Duration (days)')
+# axes[1,0].set_ylabel('Total Cost ($)')
+# axes[1,0].set_yscale('symlog')
+# axes[1,0].set_title('Cost vs Duration')
+
+axes[2].scatter(traj_df['final_acres'], traj_df['total_cost'], 
+                  c=traj_df['structures_destroyed'], cmap='Reds', alpha=0.6)
+axes[2].set_xlabel('Final Fire Size (acres)')
+axes[2].set_ylabel('Total Cost ($)')
+axes[2].set_xscale('symlog')
+axes[2].set_yscale('symlog')
+axes[2].set_title('Cost vs Size (color = structures destroyed)')
+plt.colorbar(axes[2].collections[0], ax=axes[2])
+
 plt.tight_layout()
 plt.show()
 
-###
+### 3 Calculate personnel efficiency metrics
 
-### FIGURE 2
+ics_pnw['personnel_per_1000acres'] = (ics_pnw['TOTAL_PERSONNEL'] / 
+                                       (ics_pnw['ACRES'] / 1000)).replace([np.inf, -np.inf], np.nan)
+ics_pnw['cost_per_acre'] = (ics_pnw['EST_IM_COST_TO_DATE'] / 
+                             ics_pnw['ACRES']).replace([np.inf, -np.inf], np.nan)
 
-fires = bnd_pnw[(bnd_pnw['YEAR'] >= 2000) & (bnd_pnw['YEAR'] <= 2024)]
-climate_stats = []
-
-# to geographic CRS
-fires_geo = fires.to_crs(epsg=4269)
-fires_geo['centroid_lon'] = fires_geo.geometry.centroid.x
-fires_geo['centroid_lat'] = fires_geo.geometry.centroid.y
-
-for year in range(2000, 2025):
-    fires_year = fires_geo[fires_geo['YEAR'] == year]
-    if fires_year.empty:
-        continue
-
-    if year not in helper.prism_paths['tmean'] or year not in helper.prism_paths['ppt']:
-        continue
-    
-    tmean_tif = helper.prism_paths['tmean'][year]
-    ppt_tif = helper.prism_paths['ppt'][year]
-
-    print(f"Processing {year}...")
-
-    with rasterio.open(tmean_tif) as src:
-        tmean_vals = [x[0] for x in src.sample(zip(fires_year['centroid_lon'], fires_year['centroid_lat']))]
-    
-    with rasterio.open(ppt_tif) as src:
-        ppt_vals = [x[0] for x in src.sample(zip(fires_year['centroid_lon'], fires_year['centroid_lat']))]
-    
-    fires_year = fires_year.copy()
-    fires_year['tmean'] = tmean_vals
-    fires_year['ppt'] = ppt_vals
-    
-    fires_year.loc[fires_year['tmean'] < -9000, 'tmean'] = np.nan
-    fires_year.loc[fires_year['ppt'] < -9000, 'ppt'] = np.nan
-    
-    climate_stats.append(fires_year)
-
-fires_climate = gpd.GeoDataFrame(pd.concat(climate_stats, ignore_index=True), crs=fires_geo.crs)
-fires_climate = fires_climate.dropna(subset=['tmean', 'ppt'])
-fires_climate = fires_climate.to_crs(epsg=5070)
-
-sns.lmplot(data=fires_climate, x='tmean', y='area_ha', hue='STATE', scatter_kws={'s':10})
-plt.title("Fire Size vs Mean Annual Temperature (PRISM 2000–2024)")
-plt.show()
-
-sns.lmplot(data=fires_climate, x='ppt', y='area_ha', hue='STATE', scatter_kws={'s':10})
-plt.title("Fire Size vs Total Annual Precipitation (PRISM 2000–2024)")
-plt.show()
-
-###
-
-### FIGURE 3
-
-fires_climate['temp_x_drought'] = fires_climate['tmean'] * (1 / fires_climate['ppt'])
-fires_climate['vpd_proxy'] = fires_climate['tmean'] / fires_climate['ppt']
-
-# Random Forest to identify important predictors
-features = ['tmean', 'ppt', 'temp_x_drought', 'vpd_proxy']
-X = fires_climate[features].dropna()
-y = fires_climate.loc[X.index, 'area_ha']
-
-rf = RandomForestRegressor(n_estimators=100, random_state=42)
-rf.fit(X, np.log1p(y))  # log transform for skewed area data
-
-# Feature importance
-importance_df = pd.DataFrame({
-    'feature': features,
-    'importance': rf.feature_importances_
-}).sort_values('importance', ascending=False)
-
-sns.barplot(data=importance_df, x='importance', y='feature')
-plt.title('Climate Variable Importance for Fire Size')
-plt.show()
-
-
-###
-
-### FIGURE 4
-
-# MEGA FIRES
-threshold = fires_climate['area_ha'].quantile(0.95)
-fires_climate['is_megafire'] = fires_climate['area_ha'] > threshold
-
-# Compare climate conditions
-fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-
-sns.boxplot(data=fires_climate, x='is_megafire', y='tmean', ax=axes[0])
-axes[0].set_title('Temperature: Normal vs Mega Fires')
-
-sns.boxplot(data=fires_climate, x='is_megafire', y='ppt', ax=axes[1])
-axes[1].set_title('Precipitation: Normal vs Mega Fires')
-
-plt.tight_layout()
-plt.show()
-
-# Statistical test
-from scipy.stats import mannwhitneyu
-stat, p = mannwhitneyu(
-    fires_climate[fires_climate['is_megafire']]['tmean'].dropna(),
-    fires_climate[~fires_climate['is_megafire']]['tmean'].dropna()
-)
-print(f"Temperature difference p-value: {p}")
-
-###
-
-###
-
-fires_with_year = fires_climate[['Event_ID', 'YEAR', 'geometry', 'area_ha']].copy()
-
-reburns = []
-for idx, fire in fires_with_year.iterrows():
-    # Find fires in previous years that overlap
-    previous_fires = fires_with_year[fires_with_year['YEAR'] < fire['YEAR']]
-    overlaps = previous_fires[previous_fires.intersects(fire.geometry)]
-    
-    if len(overlaps) > 0:
-        reburns.append({
-            'Event_ID': fire['Event_ID'],
-            'YEAR': fire['YEAR'],
-            'previous_fires': len(overlaps),
-            'years_since_last': fire['YEAR'] - overlaps['YEAR'].max()
-        })
-
-reburn_df = pd.DataFrame(reburns)
-print(f"Reburned areas: {len(reburn_df)}")
-sns.histplot(data=reburn_df, x='years_since_last', bins=20)
-plt.title('Fire Return Interval Distribution')
-plt.show()
-
-###
-
-###
-
-fires_climate['MONTH'] = fires_climate['Ig_Date'].dt.month
-
-season_metrics = fires_climate.groupby('YEAR').agg({
-    'MONTH': ['min', 'max', lambda x: x.max() - x.min()],
-    'Event_ID': 'count'
+efficiency_metrics = ics_pnw.groupby('FIRE_EVENT_ID').agg({
+    'ACRES': 'max',
+    'TOTAL_PERSONNEL': 'max',
+    'EST_IM_COST_TO_DATE': 'max',
+    'STR_DESTROYED': 'max',
+    'STR_THREATENED': 'max',
+    'days_since_discovery': 'max'
 }).reset_index()
 
-season_metrics.columns = ['YEAR', 'first_fire_month', 'last_fire_month', 
-                          'season_length_months', 'fire_count']
+efficiency_metrics['personnel_per_1000acres'] = (efficiency_metrics['TOTAL_PERSONNEL'] / 
+                                                   (efficiency_metrics['ACRES'] / 1000))
+efficiency_metrics['cost_per_acre'] = (efficiency_metrics['EST_IM_COST_TO_DATE'] / 
+                                        efficiency_metrics['ACRES'])
 
-fig, ax1 = plt.subplots(figsize=(10, 5))
-ax1.plot(season_metrics['YEAR'], season_metrics['season_length_months'], 
-         color='tab:red', marker='o')
-ax1.set_ylabel('Fire Season Length (months)', color='tab:red')
-ax1.set_xlabel('Year')
-ax2 = ax1.twinx()
-ax2.plot(season_metrics['YEAR'], season_metrics['fire_count'], 
-         color='tab:blue', alpha=0.3)
-ax2.set_ylabel('Fire Count', color='tab:blue')
-plt.title('Fire Season Duration Trends')
+efficiency_metrics['structures_at_risk'] = efficiency_metrics['STR_THREATENED'] > 0
+
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+sns.boxplot(data=efficiency_metrics[efficiency_metrics['personnel_per_1000acres'] < 100], 
+            x='structures_at_risk', y='personnel_per_1000acres', ax=axes[0])
+axes[0].set_title('Personnel Density: Structures at Risk vs Not')
+axes[0].set_ylabel('Personnel per 1000 acres')
+
+sns.boxplot(data=efficiency_metrics[efficiency_metrics['cost_per_acre'] < 10000], 
+            x='structures_at_risk', y='cost_per_acre', ax=axes[1])
+axes[1].set_title('Cost per Acre: Structures at Risk vs Not')
+axes[1].set_ylabel('Cost per Acre ($)')
+
+plt.tight_layout()
+plt.show()
+
+print(f"Median personnel (structures at risk): {efficiency_metrics[efficiency_metrics['structures_at_risk']]['personnel_per_1000acres'].median():.1f}")
+print(f"Median personnel (no structures): {efficiency_metrics[~efficiency_metrics['structures_at_risk']]['personnel_per_1000acres'].median():.1f}")
+
+### 4
+
+impact_data = ics_pnw.groupby('FIRE_EVENT_ID').agg({
+    'ACRES': 'max',
+    'NUM_EVACUATED': 'max',
+    'STR_DESTROYED': 'max',
+    'STR_DAMAGED': 'max',
+    'STR_THREATENED': 'max',
+    'TOTAL_PERSONNEL': 'max',
+    'FATALITIES': 'max',
+    'INJURIES': 'max',
+    'POO_STATE': 'first'
+}).reset_index()
+
+impact_data['had_evacuation'] = impact_data['NUM_EVACUATED'] > 0
+impact_data['had_structure_loss'] = impact_data['STR_DESTROYED'] > 0
+
+threat_vs_loss = impact_data[impact_data['STR_THREATENED'] > 0].copy()
+threat_vs_loss['loss_rate'] = (threat_vs_loss['STR_DESTROYED'] / 
+                                threat_vs_loss['STR_THREATENED'])
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+axes[0,0].scatter(impact_data['ACRES'], impact_data['NUM_EVACUATED'], alpha=0.5)
+axes[0,0].set_xlabel('Fire Size (acres)')
+axes[0,0].set_ylabel('People Evacuated')
+axes[0,0].set_xscale('log')
+axes[0,0].set_yscale('log')
+axes[0,0].set_title('Evacuations vs Fire Size')
+
+axes[0,1].scatter(threat_vs_loss['STR_THREATENED'], threat_vs_loss['loss_rate'], alpha=0.5)
+axes[0,1].set_xlabel('Structures Threatened')
+axes[0,1].set_ylabel('Loss Rate (destroyed/threatened)')
+axes[0,1].set_xscale('log')
+axes[0,1].set_title('Structure Loss Rate')
+
+evac_fires = impact_data[impact_data['had_evacuation']].copy()
+axes[1,0].scatter(evac_fires['NUM_EVACUATED'], evac_fires['TOTAL_PERSONNEL'], alpha=0.5)
+axes[1,0].set_xlabel('People Evacuated')
+axes[1,0].set_ylabel('Peak Personnel')
+axes[1,0].set_xscale('log')
+axes[1,0].set_yscale('log')
+axes[1,0].set_title('Personnel Response to Evacuations')
+
+state_impacts = impact_data.groupby('POO_STATE').agg({
+    'had_evacuation': 'mean',
+    'had_structure_loss': 'mean',
+    'FIRE_EVENT_ID': 'count'
+}).reset_index()
+state_impacts.columns = ['STATE', 'pct_with_evacuation', 'pct_with_structure_loss', 'fire_count']
+
+x = np.arange(len(state_impacts))
+width = 0.35
+axes[1,1].bar(x - width/2, state_impacts['pct_with_evacuation'], width, label='Had Evacuation')
+axes[1,1].bar(x + width/2, state_impacts['pct_with_structure_loss'], width, label='Had Structure Loss')
+axes[1,1].set_xticks(x)
+axes[1,1].set_xticklabels(state_impacts['STATE'])
+axes[1,1].set_ylabel('Proportion of Fires')
+axes[1,1].set_title('Impact Frequency by State')
+axes[1,1].legend()
+
+plt.tight_layout()
+plt.show()
+
+print(f"\nTotal fires with evacuations: {impact_data['had_evacuation'].sum()}")
+print(f"Total fires with structure loss: {impact_data['had_structure_loss'].sum()}")
+print(f"Average loss rate when structures threatened: {threat_vs_loss['loss_rate'].mean():.2%}")
+
+### 5
+
+ics_pnw_valid = ics_pnw[ics_pnw['CY'].notna()].copy()
+ics_pnw_valid['year'] = ics_pnw_valid['CY'].astype(int)
+ics_pnw_valid['date'] = pd.to_datetime(ics_pnw_valid['year'].astype(str) + '-07-01')
+
+print(f"Valid date records: {len(ics_pnw_valid)} out of {len(ics_pnw)}")
+print(f"Date range: {ics_pnw_valid['date'].min()} to {ics_pnw_valid['date'].max()}")
+
+daily_demand = ics_pnw_valid.groupby('year').agg({
+    'TOTAL_PERSONNEL': 'sum',
+    'FIRE_EVENT_ID': 'nunique',
+    'ACRES': 'sum',
+    'EST_IM_COST_TO_DATE': 'sum'
+}).reset_index()
+
+daily_demand.columns = ['year', 'total_personnel', 'active_fires', 'total_acres', 'cumulative_cost']
+
+fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+daily_demand.plot(x='year', y='total_personnel', ax=ax[0], title='Total Personnel per Year')
+daily_demand.plot(x='year', y='active_fires', ax=ax[1], title='Number of Fires per Year')
+plt.tight_layout()
+plt.show()
+
+### 6
+
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error, r2_score
+
+# use early reports to predict final cost
+cost_prediction_data = []
+
+for fire_id in ics_pnw['FIRE_EVENT_ID'].unique():
+    fire_reports = ics_pnw[ics_pnw['FIRE_EVENT_ID'] == fire_id].sort_values('REPORT_TO_DATE')
+    
+    if len(fire_reports) < 2:
+        continue
+    
+    early_report = fire_reports.iloc[0] 
+    final_report = fire_reports.iloc[-1]  
+    
+    cost_prediction_data.append({
+        'initial_acres': early_report['ACRES'],
+        'initial_personnel': early_report['TOTAL_PERSONNEL'],
+        'structures_threatened': early_report['STR_THREATENED'],
+        'initial_cost': early_report['EST_IM_COST_TO_DATE'],
+        'state': early_report['POO_STATE'],
+        'month': pd.to_datetime(early_report['DISCOVERY_DATE']).month,
+        'final_cost': final_report['PROJECTED_FINAL_IM_COST']
+    })
+
+cost_df = pd.DataFrame(cost_prediction_data)
+cost_df = pd.get_dummies(cost_df, columns=['state'], drop_first=True)
+cost_df = cost_df.dropna(subset=['final_cost'])
+cost_df = cost_df[cost_df['final_cost'] > 0]
+
+features = [col for col in cost_df.columns if col != 'final_cost']
+X = cost_df[features].fillna(0)
+y = np.log1p(cost_df['final_cost']) 
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+rf_cost = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_cost.fit(X_train, y_train)
+
+y_pred = rf_cost.predict(X_test)
+
+print(f"Cost Prediction Model R²: {r2_score(y_test, y_pred):.3f}")
+print(f"MAE (log scale): {mean_absolute_error(y_test, y_pred):.3f}")
+
+importance_df = pd.DataFrame({
+    'feature': features,
+    'importance': rf_cost.feature_importances_
+}).sort_values('importance', ascending=False).head(10)
+
+plt.figure(figsize=(10, 6))
+sns.barplot(data=importance_df, x='importance', y='feature')
+plt.title('Top 10 Predictors of Final Fire Cost')
+plt.tight_layout()
 plt.show()
