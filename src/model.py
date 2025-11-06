@@ -3,6 +3,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from rasterstats import zonal_stats
+import os
+import helper
+import rasterio
 
 occ = gpd.read_file("data/mtbs_fod_pts_data/mtbs_FODpoints_DD.shp")
 bnd = gpd.read_file("data/mtbs_perimeter_data/mtbs_perims_DD.shp")
@@ -28,12 +32,12 @@ print(bnd_pnw.columns)
 print(bnd_pnw.head())
 
 bnd_pnw['Ig_Date'] = pd.to_datetime(bnd_pnw['Ig_Date'], errors='coerce')
-bnd_pnw['YEAR'] = bnd_pnw['Ig_Date'].fillna(
-    bnd_pnw['Event_ID'].str.extract(r'(\d{4})$')[0].astype(float)
-)
+bnd_pnw['YEAR'] = pd.to_datetime(bnd_pnw['Ig_Date'], errors='coerce').dt.year
 
 bnd_pnw = bnd_pnw.to_crs(epsg=5070)
 bnd_pnw['area_ha'] = bnd_pnw.geometry.area / 10000.0
+
+### FIGURE 1
 
 annual = bnd_pnw.groupby('YEAR').agg(
     fire_count = ('Event_ID','count'),
@@ -42,7 +46,7 @@ annual = bnd_pnw.groupby('YEAR').agg(
     mean_area_ha = ('area_ha','mean')
 ).reset_index()
 
-sns.set_theme(style="whitegrid")
+sns.set_theme(style="darkgrid")
 fig, ax = plt.subplots(1, 2, figsize=(12, 4))
 sns.lineplot(data=annual, x="YEAR", y="fire_count", ax=ax[0])
 sns.lineplot(data=annual, x="YEAR", y="total_area_ha", ax=ax[1])
@@ -51,3 +55,50 @@ ax[1].set_title("Total Burned Area (ha)")
 plt.tight_layout()
 plt.show()
 
+###
+
+### FIGURE 2
+
+fires = bnd_pnw[(bnd_pnw['YEAR'] >= 2000) & (bnd_pnw['YEAR'] <= 2024)]
+climate_stats = []
+
+# to geographic CRS
+fires_geo = fires.to_crs(epsg=4269)
+fires_geo['centroid_lon'] = fires_geo.geometry.centroid.x
+fires_geo['centroid_lat'] = fires_geo.geometry.centroid.y
+
+for year in range(2000, 2025):
+    fires_year = fires_geo[fires_geo['YEAR'] == year]
+    if fires_year.empty:
+        continue
+
+    if year not in helper.prism_paths['tmean'] or year not in helper.prism_paths['ppt']:
+        continue
+    
+    tmean_tif = helper.prism_paths['tmean'][year]
+    ppt_tif = helper.prism_paths['ppt'][year]
+
+    print(f"Processing {year}...")
+
+    with rasterio.open(tmean_tif) as src:
+        tmean_vals = [x[0] for x in src.sample(zip(fires_year['centroid_lon'], fires_year['centroid_lat']))]
+    
+    with rasterio.open(ppt_tif) as src:
+        ppt_vals = [x[0] for x in src.sample(zip(fires_year['centroid_lon'], fires_year['centroid_lat']))]
+    
+    fires_year = fires_year.copy()
+    fires_year['tmean'] = tmean_vals
+    fires_year['ppt'] = ppt_vals
+    
+    fires_year.loc[fires_year['tmean'] < -9000, 'tmean'] = np.nan
+    fires_year.loc[fires_year['ppt'] < -9000, 'ppt'] = np.nan
+    
+    climate_stats.append(fires_year)
+
+fires_climate = gpd.GeoDataFrame(pd.concat(climate_stats, ignore_index=True), crs=fires_geo.crs)
+fires_climate = fires_climate.dropna(subset=['tmean', 'ppt'])
+fires_climate = fires_climate.to_crs(epsg=5070)
+
+sns.lmplot(data=fires_climate, x='tmean', y='area_ha', hue='STATE', scatter_kws={'s':10})
+plt.title("Fire Size vs Mean Annual Temperature (PRISM 2000–2024)")
+plt.show()
