@@ -162,3 +162,55 @@ stat, p = mannwhitneyu(
     fires_climate[~fires_climate['is_megafire']]['tmean'].dropna()
 )
 print(f"Temperature difference p-value: {p}")
+
+###
+
+###
+
+fires_with_year = fires_climate[['Event_ID', 'YEAR', 'geometry', 'area_ha']].copy()
+
+reburns = []
+for idx, fire in fires_with_year.iterrows():
+    # Find fires in previous years that overlap
+    previous_fires = fires_with_year[fires_with_year['YEAR'] < fire['YEAR']]
+    overlaps = previous_fires[previous_fires.intersects(fire.geometry)]
+    
+    if len(overlaps) > 0:
+        reburns.append({
+            'Event_ID': fire['Event_ID'],
+            'YEAR': fire['YEAR'],
+            'previous_fires': len(overlaps),
+            'years_since_last': fire['YEAR'] - overlaps['YEAR'].max()
+        })
+
+reburn_df = pd.DataFrame(reburns)
+print(f"Reburned areas: {len(reburn_df)}")
+sns.histplot(data=reburn_df, x='years_since_last', bins=20)
+plt.title('Fire Return Interval Distribution')
+plt.show()
+
+###
+
+###
+
+fires_climate['MONTH'] = fires_climate['Ig_Date'].dt.month
+
+season_metrics = fires_climate.groupby('YEAR').agg({
+    'MONTH': ['min', 'max', lambda x: x.max() - x.min()],
+    'Event_ID': 'count'
+}).reset_index()
+
+season_metrics.columns = ['YEAR', 'first_fire_month', 'last_fire_month', 
+                          'season_length_months', 'fire_count']
+
+fig, ax1 = plt.subplots(figsize=(10, 5))
+ax1.plot(season_metrics['YEAR'], season_metrics['season_length_months'], 
+         color='tab:red', marker='o')
+ax1.set_ylabel('Fire Season Length (months)', color='tab:red')
+ax1.set_xlabel('Year')
+ax2 = ax1.twinx()
+ax2.plot(season_metrics['YEAR'], season_metrics['fire_count'], 
+         color='tab:blue', alpha=0.3)
+ax2.set_ylabel('Fire Count', color='tab:blue')
+plt.title('Fire Season Duration Trends')
+plt.show()
