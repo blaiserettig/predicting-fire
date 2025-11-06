@@ -138,3 +138,27 @@ plt.show()
 ###
 
 ### FIGURE 4
+
+# MEGA FIRES
+threshold = fires_climate['area_ha'].quantile(0.95)
+fires_climate['is_megafire'] = fires_climate['area_ha'] > threshold
+
+# Compare climate conditions
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+sns.boxplot(data=fires_climate, x='is_megafire', y='tmean', ax=axes[0])
+axes[0].set_title('Temperature: Normal vs Mega Fires')
+
+sns.boxplot(data=fires_climate, x='is_megafire', y='ppt', ax=axes[1])
+axes[1].set_title('Precipitation: Normal vs Mega Fires')
+
+plt.tight_layout()
+plt.show()
+
+# Statistical test
+from scipy.stats import mannwhitneyu
+stat, p = mannwhitneyu(
+    fires_climate[fires_climate['is_megafire']]['tmean'].dropna(),
+    fires_climate[~fires_climate['is_megafire']]['tmean'].dropna()
+)
+print(f"Temperature difference p-value: {p}")
