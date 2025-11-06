@@ -7,6 +7,8 @@ from rasterstats import zonal_stats
 import os
 import helper
 import rasterio
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestRegressor
 
 occ = gpd.read_file("data/mtbs_fod_pts_data/mtbs_FODpoints_DD.shp")
 bnd = gpd.read_file("data/mtbs_perimeter_data/mtbs_perims_DD.shp")
@@ -106,3 +108,33 @@ plt.show()
 sns.lmplot(data=fires_climate, x='ppt', y='area_ha', hue='STATE', scatter_kws={'s':10})
 plt.title("Fire Size vs Total Annual Precipitation (PRISM 2000–2024)")
 plt.show()
+
+###
+
+### FIGURE 3
+
+fires_climate['temp_x_drought'] = fires_climate['tmean'] * (1 / fires_climate['ppt'])
+fires_climate['vpd_proxy'] = fires_climate['tmean'] / fires_climate['ppt']
+
+# Random Forest to identify important predictors
+features = ['tmean', 'ppt', 'temp_x_drought', 'vpd_proxy']
+X = fires_climate[features].dropna()
+y = fires_climate.loc[X.index, 'area_ha']
+
+rf = RandomForestRegressor(n_estimators=100, random_state=42)
+rf.fit(X, np.log1p(y))  # log transform for skewed area data
+
+# Feature importance
+importance_df = pd.DataFrame({
+    'feature': features,
+    'importance': rf.feature_importances_
+}).sort_values('importance', ascending=False)
+
+sns.barplot(data=importance_df, x='importance', y='feature')
+plt.title('Climate Variable Importance for Fire Size')
+plt.show()
+
+
+###
+
+### FIGURE 4
