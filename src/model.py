@@ -102,3 +102,7 @@ fires_climate = fires_climate.to_crs(epsg=5070)
 sns.lmplot(data=fires_climate, x='tmean', y='area_ha', hue='STATE', scatter_kws={'s':10})
 plt.title("Fire Size vs Mean Annual Temperature (PRISM 2000–2024)")
 plt.show()
+
+sns.lmplot(data=fires_climate, x='ppt', y='area_ha', hue='STATE', scatter_kws={'s':10})
+plt.title("Fire Size vs Total Annual Precipitation (PRISM 2000–2024)")
+plt.show()
