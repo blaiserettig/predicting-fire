@@ -1856,7 +1856,7 @@ if latest_year and len(svi_latest) > 0:
         print(high_vuln_counties.groupby('STATE_ABBR').size())
         
         print(f"\nTop 10 Most Vulnerable Counties:")
-        top_vuln = high_vuln_counties.nlargest(10, 'RPL_THEMES')[
+        top_vuln = high_vuln_counties.nlargest(50, 'RPL_THEMES')[
             ['STATE_ABBR', 'COUNTY', 'RPL_THEMES', 'E_TOTPOP']
         ]
         print(top_vuln.to_string(index=False))
