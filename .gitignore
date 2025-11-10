@@ -216,5 +216,7 @@ __marimo__/
 *.out
 *.synctex.gz
 *.toc
+*.nav
+*.snm
 .env
 local
