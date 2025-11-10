@@ -1,0 +1,455 @@
+\documentclass[10pt]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{multirow,rotating}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{tikz-cd}
+\usepackage{array}
+\usepackage{siunitx}
+\usepackage{mathtools,nccmath}%
+\usepackage{etoolbox, xparse} 
+\usetheme{CambridgeUS}
+\usecolortheme{dolphin}
+% set colors
+\definecolor{myNewColorA}{RGB}{139, 33, 49}
+\definecolor{myNewColorB}{RGB}{139, 33, 49}
+\definecolor{myNewColorC}{RGB}{139, 33, 49}
+\setbeamercolor*{palette primary}{bg=myNewColorC}
+\setbeamercolor*{palette secondary}{bg=myNewColorB, fg = white}
+\setbeamercolor*{palette tertiary}{bg=myNewColorA, fg = white}
+\setbeamercolor*{titlelike}{fg=myNewColorA}
+\setbeamercolor*{title}{bg=myNewColorA, fg = white}
+\setbeamercolor*{item}{fg=myNewColorA}
+\setbeamercolor*{caption name}{fg=myNewColorA}
+\usefonttheme{professionalfonts}
+\usepackage{natbib}
+\usepackage{hyperref}
+\graphicspath{{img/}}
+%------------------------------------------------------------
+\titlegraphic{\includegraphics[height=0.75cm]{img/Chapman University_Engineering_Logo.png}} 
+\titlegraphic{%
+\includegraphics[width=3.0cm]{chapdimensionsseal_220.png}
+}
+\setbeamerfont{title}{size=\large}
+\setbeamerfont{subtitle}{size=\small}
+\setbeamerfont{author}{size=\small}
+\setbeamerfont{date}{size=\footnotesize}
+\setbeamerfont{institute}{size=\footnotesize}
+\title[CU]{Spatiotemporal Trends in Pacific Northwest Wildfire Occurrence and Firefighting Resource Demand}
+\author[Blaise Rettig]{Blaise Rettig}
+\institute[CU]{Chapman University, Fowler School of Engineering}
+\date[\textcolor{white}{}]
+{CPSC 370 Data Science for Sustainability and Environmental Analysis\\
+Dec 08, 2025}
+%------------------------------------------------------------
+\AtBeginSection[]{
+  \begin{frame}
+  \vfill
+  \centering
+  \begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true]{title}
+    \usebeamerfont{title}\insertsectionhead\par%
+  \end{beamercolorbox}
+  \vfill
+  \end{frame}
+}
+%------------------------------------------------------------
+\begin{document}
+\frame{\titlepage}
+
+\begin{frame}
+\frametitle{Outline}
+\tableofcontents
+\end{frame}
+
+%------------------------------------------------------------
+\section{Overview and Objectives}
+
+\begin{frame}{The Pacific Northwest Wildfire Challenge}
+\textbf{Growing Concerns:}
+\begin{itemize}
+    \item Rising temperatures and prolonged droughts
+    \item Increased development at wildland-urban intersection
+    \item More frequent and severe fire events
+    \item Complex impacts on infrastructure and communities
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{The Gap:}
+\begin{itemize}
+    \item Traditional research focuses on burn severity or climate drivers
+    \item Few models connect occurrence to downstream consequences
+    \item Limited predictive frameworks for resource allocation
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Research Objectives}
+\textbf{Primary Goal:} Identify spatiotemporal trends and build a predictive framework for wildfire impacts
+
+\vspace{0.3cm}
+\textbf{Specific Objectives:}
+\begin{enumerate}
+    \item Analyze wildfire occurrence patterns (2002-2024)
+    \item Model relationships between fire characteristics and environmental/infrastructural factors
+    \item Develop Python-based predictive model for impact severity indices
+    \item Visualize trends using QGIS for decision-making support
+\end{enumerate}
+
+\vspace{0.3cm}
+\textbf{Study Area:} Oregon, Washington, Idaho (~568,000 km²)
+\end{frame}
+
+%------------------------------------------------------------
+\section{Data Used and Methods}
+
+\begin{frame}{Data Sources}
+\textbf{Wildfire Activity:}
+\begin{itemize}
+    \item MTBS: Fire perimeters, burn severity (1984-2024)
+    \item ICS-209: Resource deployment, suppression costs
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Environmental Variables:}
+\begin{itemize}
+    \item PRISM: Temperature and precipitation
+    \item TerraClimate: Wind speed
+    \item Stanford EchoLab: Wildfire smoke PM2.5
+    \item U.S. Drought Monitor: Drought indices
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Infrastructure \& Socioeconomic:}
+\begin{itemize}
+    \item EIA: Electricity generation, power plant locations
+    \item CDC/ATSDR: Social Vulnerability Index (SVI)
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Analytical Methods}
+\textbf{Temporal Analysis (Python):}
+\begin{itemize}
+    \item Time series decomposition and forecasting
+    \item Correlation analysis: climate anomalies vs. fire activity
+    \item Libraries: pandas, geopandas, numpy, matplotlib
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Spatial Analysis (QGIS):}
+\begin{itemize}
+    \item Hotspot detection and kernel density estimation
+    \item Raster overlay for infrastructure proximity
+    \item Atmospheric difference mapping
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Predictive Modeling (scikit-learn):}
+\begin{itemize}
+    \item Gradient Boosting Regressors (150 estimators, lr=0.05)
+    \item Outputs: Resource demand, evacuation risk, structure threat, suppression cost
+    \item Log-transform for skewed distributions
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------------
+\section{Results}
+
+\begin{frame}{Temporal Trends: Fire Activity Over Time}
+% Leave space for Figure 1
+\begin{center}
+\includegraphics[width=\linewidth]{1Figure_1.png}
+\end{center}
+
+\vspace{0.2cm}
+\textbf{Key Findings:}
+\begin{itemize}
+    \item Major peaks in 2006 and 2012: High fire count + large burned area
+    \item Other peaks (2000, 2017): Many fires, but controlled burn area
+    \item Suggests variable firefighting effectiveness across years
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Climate Relationships: Temperature and Precipitation}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{center}
+\includegraphics[width=0.75\linewidth]{1Figure_2.png}
+\end{center}
+\begin{itemize}
+    \item Weak negative correlation
+    \item High variability
+\end{itemize}
+
+\column{0.5\textwidth}
+\begin{center}
+\includegraphics[width=0.75\linewidth]{1Figure_3.png}
+\end{center}
+\begin{itemize}
+    \item Similar high variability
+    \item Simple metrics insufficient
+\end{itemize}
+\end{columns}
+
+\vspace{0.3cm}
+\textbf{Drought Analysis:}
+\begin{itemize}
+    \item No significant temp difference during drought (p=0.437)
+    \item Temperature and precipitation stronger predictors than drought indices
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Fire Season and Reburn Patterns}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{center}
+\includegraphics[width=\linewidth]{1Figure_7.png}
+\end{center}
+\begin{itemize}
+    \item Expanding fire season
+    \item More active fire days/year
+\end{itemize}
+
+\column{0.5\textwidth}
+\begin{center}
+\includegraphics[width=\linewidth]{1Figure_6.png}
+\end{center}
+\begin{itemize}
+    \item \textbf{929 reburned areas}
+    \item Growing prevalence
+    \item Short-interval reburns
+\end{itemize}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Firefighting Resource Deployment}
+\includegraphics[width=\linewidth]{2Figure_1.png}
+\end{frame}
+
+\begin{frame}{Firefighting Resource Deployment}
+\includegraphics[width=\linewidth]{2Figure_2.png}
+\vspace{0.2cm}
+\textbf{Critical Findings:}
+\begin{itemize}
+    \item Structures threatened: 46.8 median personnel
+    \item No structures: 26.1 median personnel
+    \item \textbf{Nearly double} the resources for structural protection
+    \item 143 fires caused evacuations
+    \item 481 fires resulted in structure loss
+    \item Average loss rate when threatened: 7.73\%
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Spatial Patterns: Fire Hotspots}
+\includegraphics[width=\linewidth]{6Figure_6.png}
+\end{frame}
+
+\begin{frame}{Spatial Patterns: Fire Hotspots}
+\includegraphics[width=\linewidth]{6Figure_7.png}
+\end{frame}
+
+\begin{frame}{Spatial Patterns: Fire Hotspots}
+
+\vspace{0.2cm}
+\textbf{Persistent Fire Hotspots:}
+\begin{itemize}
+    \item Eastern Oregon
+    \item Central Washington
+    \item Southern Idaho
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Characteristics:}
+\begin{itemize}
+    \item Dry forests, shrublands, grasslands
+    \item High fuel loads
+    \item Align with greatest temperature increases and precipitation declines
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Climate Change Impacts}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{center}
+\includegraphics[width=\linewidth]{6Figure_2.png}
+\end{center}
+\textbf{2024 vs. 2000:}
+\begin{itemize}
+    \item Range: -2.91°C to +3.41°C
+\end{itemize}
+
+\column{0.5\textwidth}
+\begin{center}
+\includegraphics[width=\linewidth]{6Figure_3.png}
+\end{center}
+\textbf{2024 vs. 2000:}
+\begin{itemize}
+    \item Range: -584mm to +2173mm
+\end{itemize}
+\end{columns}
+
+\vspace{0.3cm}
+Clear spatial patterns of warming and changing precipitation align with fire hotspots
+\end{frame}
+
+\begin{frame}{Social Vulnerability}
+\begin{center}
+\includegraphics[width=0.6\linewidth]{6Figure_9.png}
+\end{center}
+
+\vspace{0.2cm}
+\textbf{Most Vulnerable Counties:}
+\begin{itemize}
+    \item Oregon: Malheur, Jefferson, Umatilla
+    \item Washington: Adams, Yakima, Okanogan
+    \item Idaho: Washington, Elmore, Gooding
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Key Finding:} Highest vulnerability counties experience elevated fire exposure
+\end{frame}
+
+\begin{frame}{Predictive Model Performance}
+\begin{center}
+\includegraphics[width=\linewidth]{model_performance_improved.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Predictive Model Performance}
+\vspace{0.2cm}
+\textbf{R² Values (Variance Explained):}
+\begin{itemize}
+    \item Structure Threat: 68.5\% (best performer)
+    \item Suppression Cost: 25.3\%
+    \item Resource Demand: 18.9\%
+    \item Evacuation Risk: 6.0\% (poorest)
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Model Architecture:}
+\begin{itemize}
+    \item Gradient Boosting with 150 estimators
+    \item Learning rate: 0.05, max depth: 6
+    \item Log-transform for skewed distributions
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Model Predictions: Small vs. Large Fire}
+\begin{center}
+\includegraphics[width=\linewidth]{prediction_examples_improved.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Model Predictions: Small vs. Large Fire}
+\vspace{0.2cm}
+\begin{columns}
+\column{0.5\textwidth}
+\textbf{Small Fire (100 ha):}
+\begin{itemize}
+    \item 14 personnel
+    \item 87 evacuated
+    \item 22 structures
+    \item \$1.07M cost
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{Large Fire (10,000 ha):}
+\begin{itemize}
+    \item 538 personnel
+    \item 133 evacuated
+    \item 319 structures
+    \item \$4.95M cost
+\end{itemize}
+\end{columns}
+
+\vspace{0.3cm}
+Model shows expected scaling with fire size, but high uncertainty in human decision variables
+\end{frame}
+
+%------------------------------------------------------------
+\section{Highlights of Study}
+
+\begin{frame}{Key Findings}
+\textbf{Clear Spatiotemporal Trends:}
+\begin{itemize}
+    \item Increasing frequency and burned area (1984-2024)
+    \item Expanding fire season length
+    \item 929 reburned areas identified
+    \item Persistent hotspots in eastern PNW
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Infrastructure \& Social Impacts:}
+\begin{itemize}
+    \item Double personnel for structure protection
+    \item Spatial correlation with energy infrastructure
+    \item Significant disparities in vulnerability across communities
+    \item PM2.5 exposure increased during major fire years
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Model Limitations and Insights}
+\textbf{Why the Model Struggles:}
+\begin{itemize}
+    \item Operational decisions involve real-time factors beyond historical data
+    \item Political pressures and resource constraints not captured
+    \item Evacuation orders depend on local protocols, not just fire characteristics
+    \item High cost variability from jurisdictional differences
+    \item I'm not great at this
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{What Works:}
+\begin{itemize}
+    \item Structure threat prediction (68.5\% R²)
+    \item Spatial hotspot identification for resource pre-positioning
+    \item Social vulnerability mapping for preparedness planning
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Implications for Management}
+\textbf{Practical Applications:}
+\begin{itemize}
+    \item Spatial hotspot analysis → firefighting asset pre-positioning
+    \item Social vulnerability mapping → targeted preparedness programs
+    \item Climate trend analysis → long-term resource planning
+    \item Structure threat model → evacuation planning support
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Future Research Directions:}
+\begin{itemize}
+    \item Incorporate high-resolution fire weather indices
+    \item Add real-time fuel and/or moisture measurements
+    \item Include suppression strategy data
+    \item Extend to post-fire recovery and economic impacts
+    \item Explore neural networks for non-linear relationships
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Conclusions}
+\textbf{This research demonstrates:}
+\begin{itemize}
+    \item Pacific Northwest wildfires show clear increasing trends
+    \item Climate variables have complex relationships with fire activity
+    \item Significant disparities exist in impact distribution
+    \item Predicting human dimensions (evacuation, deployment) remains challenging
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Central Message:}
+\begin{center}
+\textit{Effective wildfire management must integrate climate data, spatial analysis, and social considerations to protect communities and ecosystems.}
+\end{center}
+
+\vspace{0.3cm}
+\textbf{Repository:} \href{https://github.com/blaiserettig/predicting-fire}{github.com/blaiserettig/predicting-fire}
+\end{frame}
+
+%------------------------------------------------------------
+\section*{Acknowledgement}  
+\begin{frame}
+\textcolor{myNewColorA}{\huge{\centerline{Thank you!}}}
+\vspace*{0.5cm}
+\textcolor{myNewColorA}{\Large{\centerline{brettig@chapman.edu}}}
+\end{frame}
+
+\end{document}
